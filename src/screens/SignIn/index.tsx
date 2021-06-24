@@ -1,20 +1,28 @@
-import React, { ReactNode } from "react";
+import React from "react";
+import { useNavigation } from "@react-navigation/native";
+import { Text, View, Image, Alert } from "react-native";
 
-import { Text, View, Image } from "react-native";
 import { ButtonIcon } from "../../components/ButtonIcon";
 import IllustrationImg from "../../assets/illustration.png";
-
+import { Background } from "../../components/Background";
 import { styles } from "./styles";
-import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../../hooks/auth";
 
 export function SignIn() {
-  const navigation = useNavigation();
+  const { user, signIn } = useAuth()
 
   function handleSignIn() {
-    navigation.navigate("Home");
+    try{
+
+      signIn()
+    }catch(e) {
+      Alert.alert(e)
+    }
   }
 
   return (
+    <Background>
+
     <View style={styles.container}>
       <Image
         source={IllustrationImg}
@@ -37,5 +45,6 @@ export function SignIn() {
         />
       </View>
     </View>
+    </Background>
   );
 }
