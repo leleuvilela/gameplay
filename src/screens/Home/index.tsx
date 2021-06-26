@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
-import { Appointment } from "../../components/Appointment";
+import { Appointment, AppointmentProps } from "../../components/Appointment";
 import { ButtonAdd } from "../../components/ButtonAdd";
 import { CategorySelect } from "../../components/CategorySelect";
 import { ListDivider } from "../../components/ListDivider";
@@ -12,37 +12,21 @@ import { Profile } from "../../components/Profile";
 import { Background } from "../../components/Background";
 
 import { styles } from "./styles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { COLLECTION_APPOINTMENTS } from "../../configs/database";
+import { Load } from "../../components/Load";
 
 export function Home() {
-  const [categorySelected, setCategorySelected] = useState("");
   const navigation = useNavigation();
+  const [categorySelected, setCategorySelected] = useState("");
+  const [appointments, setAppointments] = useState<AppointmentProps[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const appointments = [
-    {
-      id: "1",
-      guild: {
-        id: "1",
-        name: "Lendários",
-        icon: null,
-        owner: true,
-      },
-      category: "1",
-      date: "22/06 às 20:40h",
-      description: "É hoje que vamos chegar ao fucking challenger gg wp izi",
-    },
-    {
-      id: "2",
-      guild: {
-        id: "1",
-        name: "Lendários",
-        icon: null,
-        owner: true,
-      },
-      category: "1",
-      date: "22/06 às 20:40h",
-      description: "É hoje que vamos chegar ao fucking challenger gg wp izi",
-    },
-  ];
+  useFocusEffect(
+    useCallback(() => {
+      loadAppointments();
+    }, [categorySelected])
+  );
 
   function handleCategorySelect(categoryId: string) {
     categoryId === categorySelected
@@ -50,12 +34,28 @@ export function Home() {
       : setCategorySelected(categoryId);
   }
 
-  function handleAppointmentDetails() {
-    navigation.navigate("AppointmentDetails");
+  function handleAppointmentDetails(guildSelected: AppointmentProps) {
+    navigation.navigate("AppointmentDetails", { guildSelected });
   }
 
   function handleAppointmentCreate() {
     navigation.navigate("AppointmentCreate");
+  }
+
+  async function loadAppointments() {
+    const storage = await AsyncStorage.getItem(COLLECTION_APPOINTMENTS);
+    const appointmentsAll: AppointmentProps[] = storage
+      ? JSON.parse(storage)
+      : [];
+
+    if (categorySelected) {
+      setAppointments(
+        appointmentsAll.filter((item) => item.category === categorySelected)
+      );
+    } else {
+      setAppointments(appointmentsAll);
+    }
+    setLoading(false);
   }
 
   return (
@@ -66,27 +66,31 @@ export function Home() {
           <ButtonAdd onPress={handleAppointmentCreate} />
         </View>
 
-        <View>
-          <CategorySelect
-            categorySelected={categorySelected}
-            setCategory={handleCategorySelect}
-          />
+        <CategorySelect
+          categorySelected={categorySelected}
+          setCategory={handleCategorySelect}
+        />
 
-          <ListHeader title="Partidas agendadas" subtitle="Total 6" />
+        {loading ? (
+          <Load />
+        ) : (
+          <>
+            <ListHeader title="Partidas agendadas" subtitle={`Total ${appointments.length}`} />
 
-      </View>
-      <FlatList
-        data={appointments}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Appointment data={item} onPress={handleAppointmentDetails} />
+            <FlatList
+              data={appointments}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Appointment data={item} onPress={() => handleAppointmentDetails(item)} />
+              )}
+              ItemSeparatorComponent={() => <ListDivider />}
+              contentContainerStyle={{ paddingBottom: 69 }}
+              style={styles.matches}
+              showsVerticalScrollIndicator={false}
+            />
+          </>
         )}
-        ItemSeparatorComponent={() => <ListDivider />}
-        contentContainerStyle={{ paddingBottom: 69 }}
-        style={styles.matches}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+      </View>
     </Background>
   );
 }
